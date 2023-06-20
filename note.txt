@@ -1,0 +1,15 @@
+1. ball detect dùng đặc trưng về ảnh và đặc trưng về vị trí bóng
+- lấy kết quả detect vị trí từ mô hình detect bóng => crop 1 vùng frame quanh chỗ detect bóng đó
+=> kết hợp với vị trí bóng, feed vào 1 mạng 2 luông
+=> 1 luồng cnn để process 9 stacked frame, 1 luồng lstm để process vị trí bóng
+=> cuối cùng merge lại với nhau rồi cho đi qua vài lớp FC => ra được class dự đoán
+
+2. tính khả thi lúc chạy trên video
+- vẫn detect bóng trên từng frame một, sau đó crop 1 vùng xung quanh bóng
+- lưu lại khung frame đã crop + vị trí bóng cho 9 frame gần nhất
+- khi nào đủ 9 frame thì bắt đầu infer vị trí bóng + event
+
+
+3. tỉ lệ các class
+- nếu chỉ tính prob 1: bounce, net, empty:  1732 1332 3622
+- nêu tính cả các prob xung quanh: bounce, net, empty:  10900 7945 3622

@@ -1,0 +1,129 @@
+# pytorch_lightning==1.9.5
+seed_everything: true
+trainer:
+  devices: [0]
+  max_epochs: 100
+  min_epochs: 30
+  accelerator: gpu
+  precision: 32
+  accumulate_grad_batches: 3
+  auto_lr_find: false
+  profiler: null
+
+  logger:
+    class_path: pytorch_lightning.loggers.TensorBoardLogger
+    init_args:
+      save_dir: 'ckpt/exp5_ce_loss_remake_label_320_128'
+      name: ''
+      version: ''
+
+  callbacks:
+    - class_path: pytorch_lightning.callbacks.ModelCheckpoint
+      init_args:
+        dirpath: ${trainer.logger.init_args.save_dir}
+        filename: '{epoch}-{train_loss:.3f}-{val_loss:.3f}-{train_acc:.3f}-{val_acc:.3f}'
+        monitor: val_acc
+        save_top_k: 2
+        mode: max
+        every_n_epochs: 1
+        auto_insert_metric_name: true
+
+    - class_path: pytorch_lightning.callbacks.EarlyStopping
+      init_args:
+        monitor: ${trainer.callbacks[0].init_args.monitor}
+        patience: 20
+        mode: ${trainer.callbacks[0].init_args.mode}
+
+    - class_path: RichProgressBar
+      init_args:
+        leave: true
+
+    - class_path: LearningRateMonitor
+      init_args:
+        logging_interval: step
+    
+    - class_path: RichModelSummary
+      init_args:
+        max_depth: 1
+
+  overfit_batches: 0.0
+  fast_dev_run: false
+  log_every_n_steps: 3
+  check_val_every_n_epoch: 1
+  auto_scale_batch_size: false
+  limit_train_batches: null
+  limit_val_batches: null
+  limit_test_batches: null
+  limit_predict_batches: null
+
+  default_root_dir: null
+  gradient_clip_val: null
+  gradient_clip_algorithm: null
+  num_processes: null
+  track_grad_norm: -1
+  val_check_interval: null
+  num_sanity_val_steps: 2
+  benchmark: null
+  deterministic: null
+  reload_dataloaders_every_n_epochs: 0
+  replace_sampler_ddp: true
+  detect_anomaly: false
+  plugins: null
+  amp_backend: null
+  amp_level: null
+  move_metrics_to_cpu: false
+  multiple_trainloader_mode: max_size_cycle
+  inference_mode: true
+
+ 
+model:
+  model:
+    class_path: model.EventClassifierModel
+    init_args:
+      cnn_cfg:
+        num_frames: 9
+        cut_index: 6  # not included
+
+      lstm_cfg:
+        input_size: 2
+        hidden_size: 8
+        num_layers: 2
+        output_size: 8
+        dropout: 0.1
+
+      num_classes: 3
+      classifier_dropout: 0.1
+
+  learning_rate: 1.0e-03
+  reset_optimizer: false
+  pos_weight: 0.7
+  ev_diff_thresh: 0.25
+        
+data:
+  # train_path: 'data/train_event_new_9.pkl'
+  # val_path: 'data/val_event_new_9.pkl'
+  # test_path: 'data/test_event_new_9.pkl'
+
+  train_path: data/train_event_cropped_9_320_128.pkl
+  val_path: data/val_event_cropped_9_320_128.pkl
+  test_path: data/test_event_cropped_9_320_128.pkl
+
+  data_cfg: 
+    n_input_frames: 9
+    n_sample_limit: 1.0e+09
+    crop_size:
+    - 320
+    - 128
+    do_augment: true
+    already_cropped: true
+    augment_props:
+      augment_img_prob: 0.3
+      mask_ball_prob: 0.15
+      max_mask_ball: 3
+
+  training_cfg:
+    bs: 64
+    shuffle_train: true
+    num_workers: 8
+
+ckpt_path: null
