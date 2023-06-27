@@ -13,7 +13,7 @@ trainer:
   logger:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
-      save_dir: 'ckpt_3d/exp2_ce_loss_remake_label_182_182_320_128'
+      save_dir: 'ckpt_3d/exp1_crop_320_400_resize_182_182_mask_red_ball'
       name: ''
       version: ''
 
@@ -84,15 +84,15 @@ model:
   - 1.
   - 1.
   learning_rate: 1.0e-03
-  reset_optimizer: false
+  reset_optimizer: true
   pos_weight: 0.7
   ev_diff_thresh: 0.25
         
 data:
-  train_path: 'data/train_event_new_9.pkl'
-  val_path: 'data/val_event_new_9.pkl'
-  test_path: 'data/test_event_new_9.pkl'
-  predict_path: 'data/test_event_new_9.pkl'
+  train_path: 'data/train_event_new_9_exp71_epoch40_centernet_3_frame_add_no_ball_frame.pkl'
+  val_path: 'data/val_event_new_9_exp71_epoch40_centernet_3_frame_add_no_ball_frame.pkl'
+  test_path: 'data/test_event_new_9_exp71_epoch40_centernet_3_frame_add_no_ball_frame.pkl'
+  predict_path: 'data/test_event_new_9_exp71_epoch40_centernet_3_frame_add_no_ball_frame.pkl'
 
   # train_path: data/train_event_cropped_9_320_128.pkl
   # val_path: data/val_event_cropped_9_320_128.pkl
@@ -109,17 +109,18 @@ data:
     input_size:
     - 182
     - 182
+    mask_red_ball: true
     ball_radius: 8
     do_augment: true
     already_cropped: false
     augment_props:
       augment_img_prob: 0.3
-      mask_ball_prob: 1
+      mask_ball_prob: 0.15
       max_mask_ball: 4
 
   training_cfg:
-    bs: 16
+    bs: 32
     shuffle_train: true
-    num_workers: 0
+    num_workers: 8
 
 ckpt_path: null

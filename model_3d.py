@@ -5,6 +5,7 @@ import pdb
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from easydict import EasyDict
 from typing import List, Tuple, Dict, Optional, Union
 import pytorch_lightning as pl
 from torchmetrics.classification import MulticlassAccuracy, MulticlassF1Score
@@ -38,7 +39,7 @@ class X3DLSTMModel(pl.LightningModule):
         self.x3d_cfg = EasyDict(x3d_cfg)
         self.lstm_cfg = EasyDict(lstm_cfg)
 
-        self.lstm_model = LSTMModel(**self.lstm_cfg)
+        self.lstm = LSTMModel(**self.lstm_cfg)
         self.x3d = torch.hub.load('facebookresearch/pytorchvideo', self.x3d_cfg.version, pretrained=True)
         self.x3d.blocks[-1].proj = nn.Linear(in_features=2048, out_features=112, bias=True)
 
@@ -62,7 +63,7 @@ class X3DLSTMModel(pl.LightningModule):
 class X3DLSTMModule(pl.LightningModule):
     def __init__(
         self,
-        model,
+        model: X3DLSTMModel,
         class_weight: List[float],
         learning_rate: float,
         reset_optimizer: bool,
@@ -213,10 +214,10 @@ class X3DModule(pl.LightningModule):
         acc = getattr(self, f'{split}_acc')
         acc(logits, labels)
 
-        if split in ['val', 'test']:
-            probs = torch.softmax(logits, dim=1)
-            for prob, label in zip(probs, labels):
-                print('probs:', torch.round(input=prob, decimals=2), 'label:', label)
+        # if split in ['val', 'test']:
+        #     probs = torch.softmax(logits, dim=1)
+        #     for prob, label in zip(probs, labels):
+        #         print('probs:', torch.round(input=prob, decimals=2), 'label:', label)
 
         self.log_dict({
             f'{split}_loss': loss,
