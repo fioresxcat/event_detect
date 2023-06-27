@@ -27,11 +27,13 @@ class EventDataset3D(EventDataset):
         n_input_frames,
         n_sample_limit,
         crop_size,
+        input_size, 
+        ball_radius,
         already_cropped,
         do_augment=False,
         augment_props={},
     ):
-        super(EventDataset3D, self).__init__(data_path, transforms, mode, n_input_frames, n_sample_limit, crop_size, already_cropped, do_augment, augment_props)
+        super(EventDataset3D, self).__init__(data_path, transforms, mode, n_input_frames, n_sample_limit, crop_size, input_size, ball_radius, already_cropped, do_augment, augment_props)
         self.normalize_video = NormalizeVideo(
             mean = [0.45, 0.45, 0.45],
             std = [0.225, 0.225, 0.225]
@@ -49,7 +51,7 @@ class EventDataset3D(EventDataset):
             input_imgs, ls_norm_pos = self.crop_images_from_paths(img_paths, ls_norm_pos)
         
 
-        if self.mode == 'train' and np.random.rand() < self.augment_props.augment_img_prob:
+        if self.mode == 'train' and self.do_augment and np.random.rand() < self.augment_props.augment_img_prob:
             transformed = self.transforms(
                 image=input_imgs[0],
                 image0=input_imgs[1],
@@ -159,11 +161,13 @@ if __name__ == '__main__':
     ds_module = EventDataModule3D(**config.data)
     ds_module.setup('fit')
     ds = ds_module.train_ds
+
     for i, item in enumerate(ds):
         imgs, pos, ev = item
         print(imgs.shape)
         print(pos.shape)
-        print(ev.shape)
-        break
+        print('img paths: ', ds.ls_img_paths[i])
+        print('ev_probs: ', ev)
+        # break
     pdb.set_trace()
     print('ok')

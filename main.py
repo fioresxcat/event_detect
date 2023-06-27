@@ -12,7 +12,7 @@ from pytorch_lightning.cli import LightningCLI
 from dataset_event import EventDataModule
 from model import EventClassifierModule
 from dataset_event_3d import EventDataModule3D
-from model_3d import X3DModule
+from model_3d import X3DModule, X3DLSTMModule
 
 
 class MyLightningCLI(LightningCLI):
@@ -30,7 +30,7 @@ class MyLightningCLI(LightningCLI):
 
 def cli_main():
     cli = MyLightningCLI(
-        X3DModule,
+        X3DLSTMModule,
         EventDataModule3D,
         parser_kwargs={"parser_mode": "omegaconf"},
         save_config_overwrite=False

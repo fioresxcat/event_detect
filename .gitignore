@@ -4,3 +4,5 @@ cropped_data_128_128/
 cropped_data_320_128/
 data/
 lightning_logs/
+masked_red_data/
+test/

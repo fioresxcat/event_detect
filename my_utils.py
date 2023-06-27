@@ -7,6 +7,7 @@ import pickle
 import pdb
 import albumentations as A
 
+np.random.seed(42)
 
 
 
@@ -287,6 +288,7 @@ def crop_img_for_event_cls(ev_data_fp, out_dir, split, crop_size=128):
         f.write(bin)
 
 
+
 def crop_img_for_event_cls_2(ev_data_fp, out_dir, split, crop_size=(320, 128)):
     with open(ev_data_fp, 'rb') as f:
         ev_data = pickle.load(f)
@@ -316,17 +318,13 @@ def crop_img_for_event_cls_2(ev_data_fp, out_dir, split, crop_size=(320, 128)):
 
         mean_cx = np.mean([pos[0] for pos in ls_pos if pos[0] > 0])
         mean_cy = np.mean([pos[1] for pos in ls_pos if pos[1] > 0])
-        # mean_cx = ls_pos[4][0]
         
         mean_cx = int(mean_cx*1920)
         mean_cy = int(mean_cy*1080)
         xmin = max(0, mean_cx - crop_size[0]//2)
         xmax = min(mean_cx + crop_size[0]//2, 1920)
-        ymin = max(0, mean_cy - crop_size[1]//2)
-        ymax = min(mean_cy + crop_size[1]//2, 1080)
-
-        # xmin, xmax, ymin, ymax = 650, 1000, 500, 700
-
+        ymin = max(0, mean_cy - crop_size[1] // 3)
+        ymax = min(mean_cy + crop_size[1]*2//3, 1080)
 
 
         for i, img_fp in enumerate(img_paths):
@@ -349,24 +347,124 @@ def crop_img_for_event_cls_2(ev_data_fp, out_dir, split, crop_size=(320, 128)):
             out_fp = str(out_fp)
             new_img_paths.append(out_fp)
             os.makedirs(Path(out_fp).parent, exist_ok=True)
-            cv2.imwrite(out_fp, cropped_img)
+            cv2.imwrite(out_fp, cv2.resize(cropped_img, (182, 182)))
             print(f'Done {out_fp}')
         new_ev_data[tuple(new_img_paths)] = (ls_pos, ev_target)
 
     bin = pickle.dumps(new_ev_data)
-    with open(f'data/{split}_event_cropped_9_320_128.pkl', 'wb') as f:
+    with open(f'data/{split}_event_cropped_9_{crop_size[0]}_{crop_size[1]}.pkl', 'wb') as f:
+        f.write(bin)
+
+
+def mask_red_ball(ev_data_fp, out_dir, out_size):
+    os.makedirs(out_dir, exist_ok=True)
+    with open(ev_data_fp, 'rb') as f:
+        ev_data = pickle.load(f)
+    new_ev_data = {}
+    for img_paths, (ls_pos, ev_target) in ev_data.items():
+        new_img_paths = []
+        imgs = [cv2.imread(img_fp) for img_fp in img_paths]
+        for i, img in enumerate(imgs):
+            img_fp = Path(img_paths[i])
+            pos = ls_pos[i]
+            abs_pos = (int(pos[0] * img.shape[1]), int(pos[1] * img.shape[0]))
+            img = cv2.circle(img, abs_pos, 10, (0, 0, 255), -1)
+            resized_img = cv2.resize(img, (out_size))
+            out_fp = os.path.join(out_dir, img_fp.parent.name, img_fp.name)
+            cnt = 1
+            while os.path.exists(out_fp):
+                out_fp = Path(out_fp)
+                out_fp = out_fp.parent / (out_fp.stem + f'_{cnt}' + out_fp.suffix)
+                cnt += 1
+            out_fp = str(out_fp)
+            new_img_paths.append(out_fp)
+            os.makedirs(Path(out_fp).parent, exist_ok=True)
+            cv2.imwrite(out_fp, resized_img)
+            print(f'Done {out_fp}')
+        new_ev_data[tuple(new_img_paths)] = (ls_pos, ev_target)
+        
+
+
+def crop_img_for_event_cls_3(ev_data_fp, out_dir, split, ball_r, max_invalid_pos, crop_size=(320, 128)):
+    with open(ev_data_fp, 'rb') as f:
+        ev_data = pickle.load(f)
+    new_ev_data = {}
+    for img_paths, (ls_pos, ev_target) in ev_data.items():
+        # augment mask pos
+        if np.random.rand() < 0.3:
+            if np.random.rand() < 0.5:
+                invalid_indices = [i for i, pos in enumerate(ls_pos) if pos[0] < 0 or pos[1]<0]
+                if len(invalid_indices) < max_invalid_pos:
+                    mask_indices = np.random.choice(
+                        [i for i in range(len(ls_pos)) if i not in invalid_indices], 
+                        max_invalid_pos-len(invalid_indices), 
+                    )
+                    for idx in mask_indices:
+                        ls_pos[idx] = (-1, -1)
+
+
+        new_img_paths = []
+        median_cx = np.median([pos[0] for pos in ls_pos if pos[0] > 0])
+        median_cy = np.median([pos[1] for pos in ls_pos if pos[1] > 0])
+        median_cx = int(median_cx*1920)
+        median_cy = int(median_cy*1080)
+        xmin = max(0, median_cx - crop_size[0]//2)
+        xmax = min(median_cx + crop_size[0]//2, 1920)
+        ymin = max(0, median_cy - crop_size[1] // 3)
+        ymax = min(median_cy + crop_size[1]*2//3, 1080)
+
+        for i, img_fp in enumerate(img_paths):
+            orig_img = cv2.imread(img_fp)
+            img_fp = Path(img_fp)
+            cropped_img = orig_img[ymin:ymax, xmin:xmax]
+
+            # mask red ball
+            pos = ls_pos[i]
+            if tuple(pos) != (-1, -1):
+                abs_pos = (int(pos[0] * orig_img.shape[1]), int(pos[1] * orig_img.shape[0]))
+                cropped_pos = (abs_pos[0] - xmin, abs_pos[1] - ymin)
+                cropped_img = cv2.circle(cropped_img, cropped_pos, ball_r, (0, 0, 255), -1)
+
+            # resize
+            cropped_img = cv2.resize(cropped_img, crop_size)
+
+            # choose fp
+            out_fp = os.path.join(out_dir, img_fp.parent.name, img_fp.name)
+            cnt = 1
+            while os.path.exists(out_fp):
+                out_fp = Path(out_fp)
+                out_fp = out_fp.parent / (out_fp.stem + f'_{cnt}' + out_fp.suffix)
+                cnt += 1
+            out_fp = str(out_fp)
+
+            # save
+            new_img_paths.append(out_fp)
+            os.makedirs(Path(out_fp).parent, exist_ok=True)
+            cv2.imwrite(out_fp, cropped_img)
+            print(f'Done {out_fp}')
+
+        new_ev_data[tuple(new_img_paths)] = (ls_pos, ev_target)
+
+    bin = pickle.dumps(new_ev_data)
+    with open(f'data/{split}_event_cropped_9_{crop_size[0]}_{crop_size[1]}.pkl', 'wb') as f:
         f.write(bin)
 
 
 if __name__ == '__main__':
-    np.random.seed(42)
 
-    for split in ['test', 'val', 'train']:
-        if split != 'train':
-            continue
-        ev_data_fp = f'data/{split}_event_new_9.pkl'
-        out_dir = f'cropped_data_320_128/{split}'
-        crop_img_for_event_cls_2(ev_data_fp, out_dir, split)
+    crop_img_for_event_cls_3(
+        ev_data_fp='data/test_event_new_9.pkl',
+        out_dir='cropped_data_320_400/',
+        split='test',
+        ball_r = 8,
+        crop_size=(320, 400)
+    )
+    # for split in ['test', 'val', 'train']:
+    #     if split != 'train':
+    #         continue
+    #     ev_data_fp = f'data/{split}_event_new_9.pkl'
+    #     out_dir = f'cropped_data_320_400/{split}'
+    #     crop_img_for_event_cls_2(ev_data_fp, out_dir, split, crop_size=(320, 400))
 
     # with open('data/test_event_cropped_9_128_128.pkl', 'rb') as f:
     #     data = pickle.load(f)

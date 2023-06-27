@@ -100,13 +100,13 @@ model:
   ev_diff_thresh: 0.25
         
 data:
-  # train_path: 'data/train_event_new_9.pkl'
-  # val_path: 'data/val_event_new_9.pkl'
-  # test_path: 'data/test_event_new_9.pkl'
+  train_path: 'data/train_event_new_9.pkl'
+  val_path: 'data/val_event_new_9.pkl'
+  test_path: 'data/test_event_new_9.pkl'
 
-  train_path: data/train_event_cropped_9_320_128.pkl
-  val_path: data/val_event_cropped_9_320_128.pkl
-  test_path: data/test_event_cropped_9_320_128.pkl
+  # train_path: data/train_event_cropped_9_320_128.pkl
+  # val_path: data/val_event_cropped_9_320_128.pkl
+  # test_path: data/test_event_cropped_9_320_128.pkl
 
   data_cfg: 
     n_input_frames: 9

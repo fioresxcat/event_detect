@@ -1,4 +1,6 @@
 import numpy as np
+from pathlib import Path
+import os
 import pdb
 from easydict import EasyDict
 from pytorch_lightning.utilities.types import EVAL_DATALOADERS, TRAIN_DATALOADERS
@@ -57,6 +59,8 @@ class EventDataset(Dataset):
         n_input_frames,
         n_sample_limit,
         crop_size,
+        input_size,
+        ball_radius,
         already_cropped,
         do_augment=False,
         augment_props={},
@@ -70,6 +74,8 @@ class EventDataset(Dataset):
         self.n_input_frames = n_input_frames
         self.n_sample_limit = int(n_sample_limit)
         self.crop_size = crop_size
+        self.input_size = input_size
+        self.ball_radius = ball_radius
         self.already_cropped = already_cropped
         self.transforms = transforms
         self.jpeg_reader = TurboJPEG()
@@ -87,39 +93,75 @@ class EventDataset(Dataset):
         return len(self.ls_img_paths)
     
 
-    def crop_images_from_paths(self, img_paths, ls_norm_pos):
-        input_imgs = []
+    def crop_images_from_paths(self, img_paths, ls_norm_pos, event_target):
+        # mask pos
         if self.mode == 'train' and self.do_augment and np.random.rand() < self.augment_props.mask_ball_prob:
-            num_invalid_pos = len([pos for pos in ls_norm_pos if pos[0]< 0 or pos[1] < 0])
-            max_size = self.augment_props.max_mask_ball - num_invalid_pos
-            mask_indices = np.random.choice(list(range(len(ls_norm_pos))), size=np.random.randint(0, max_size+1))
-        else:
-            mask_indices = []
-        for i, fp in enumerate(img_paths):
-            pos = ls_norm_pos[i]
-            if pos[0] < 0 or pos[1] < 0 or i in mask_indices:
-                ls_norm_pos[i] = (-1, -1)
-                cropped_img = np.zeros(shape=(self.crop_size[0], self.crop_size[0], 3), dtype=np.uint8)
-            else:
-                orig_pos = (int(pos[0]*self.orig_w), int(pos[1]*self.orig_h))
-                with open(fp, 'rb') as in_file:
-                    orig_img = self.jpeg_reader.decode(in_file.read(), 0)  # already rgb images
-                r = self.crop_size[0]//2
-                xmin, ymin = orig_pos[0] - r, orig_pos[1] - r
-                xmax, ymax = orig_pos[0] + r, orig_pos[1] + r
-                cropped_img = orig_img[max(0, ymin):max(0, ymax), max(0, xmin):max(0, xmax)]
-                if cropped_img.shape != (self.crop_size[0], self.crop_size[0], 3):
-                    pad_x = (max(0, -xmin), max(0, xmax-self.orig_w))
-                    pad_y = (max(0, -ymin), max(0, ymax-self.orig_h))
-                    pad_c = (0, 0)
-                    cropped_img = np.pad(cropped_img, [pad_y, pad_x, pad_c], mode='constant')
+            if np.random.rand() < 1:  # random mask
+                num_invalid_pos = len([pos for pos in ls_norm_pos if pos[0]< 0 or pos[1] < 0])
+                max_size = self.augment_props.max_mask_ball - num_invalid_pos
+                mask_indices = np.random.choice(list(range(len(ls_norm_pos))), size=np.random.randint(0, max_size+1))
+                for idx in mask_indices:
+                    ls_norm_pos[idx] = (-1, -1)
+            # else:   # mask first half or second half
+            #     first_part_pos = [pos for i, pos in enumerate(ls_norm_pos) if i <= len(ls_norm_pos)//2]
+            #     second_part_pos = [pos for i, pos in enumerate(ls_norm_pos) if i >= len(ls_norm_pos)//2]
+            #     first_pos_valid = all(pos[0] > 0 and pos[1] > 0 for pos in first_part_pos)
+            #     second_pos_valid = all(pos[0] > 0 and pos[1] > 0 for pos in second_part_pos)
+            #     if first_pos_valid and second_pos_valid:
+            #         if np.random.rand() < 0.5:
+            #             for i in range(len(ls_norm_pos)//2+1, len(ls_norm_pos)):
+            #                 ls_norm_pos[i] = (-1, -1)
+            #         else:
+            #             for i in range(0, len(ls_norm_pos)//2):
+            #                 ls_norm_pos[i] = (-1, -1)
+            #     elif first_pos_valid:
+            #         for i in range(len(ls_norm_pos)//2+1, len(ls_norm_pos)):
+            #             ls_norm_pos[i] = (-1, -1)
+            #     elif second_pos_valid:
+            #         for i in range(0, len(ls_norm_pos)//2):
+            #             ls_norm_pos[i] = (-1, -1)
 
+        
+        # select crop coords
+        median_cx = np.median([pos[0] for pos in ls_norm_pos if pos[0] > 0])
+        median_cy = np.median([pos[1] for pos in ls_norm_pos if pos[1] > 0])
+        median_cx = int(median_cx*1920)
+        median_cy = int(median_cy*1080)
+        xmin = max(0, median_cx - self.crop_size[0]//2)
+        xmax = min(median_cx + self.crop_size[0]//2, 1920)
+        ymin = max(0, median_cy - self.crop_size[1] // 3)   # crop only 1/3 on top
+        ymax = min(median_cy + self.crop_size[1]*2//3, 1080)    # crop 2/3 on bottom
+
+        # crop imgs
+        input_imgs = []
+        for i, fp in enumerate(img_paths):
+            orig_img = cv2.imread(str(fp))
+            cropped_img = orig_img[ymin:ymax, xmin:xmax]
+
+            # mask red ball
+            pos = ls_norm_pos[i]
+            if tuple(pos) != (-1, -1):
+                abs_pos = (int(pos[0] * orig_img.shape[1]), int(pos[1] * orig_img.shape[0]))
+                cropped_pos = (abs_pos[0] - xmin, abs_pos[1] - ymin)
+                cropped_img = cv2.circle(cropped_img, cropped_pos, self.ball_radius, (0, 0, 255), -1)
+
+            # resize
+            cropped_img = cv2.resize(cropped_img, self.input_size)
+
+            # append
             input_imgs.append(cropped_img)
         
+        # out_dir = 'test'
+        # os.makedirs(out_dir, exist_ok=True)
+        # for i, img in enumerate(input_imgs):
+        #     img_fn = Path(img_paths[i]).parent.name + '_' + Path(img_paths[i]).name
+        #     cv2.imwrite(f'{out_dir}/{img_fn}', img)
+        # pdb.set_trace()
+
         return input_imgs, ls_norm_pos
     
 
-    def get_already_cropped_images(self, img_paths, ls_norm_pos):
+    def get_already_cropped_images(self, img_paths, ls_norm_pos, event_target):
         input_imgs = []
         if self.mode == 'train' and self.do_augment and np.random.rand() < self.augment_props.mask_ball_prob:
             num_invalid_pos = len([pos for pos in ls_norm_pos if pos[0]< 0 or pos[1] < 0])
@@ -147,9 +189,9 @@ class EventDataset(Dataset):
 
         # process img
         if self.already_cropped:
-            input_imgs, ls_norm_pos = self.get_already_cropped_images(img_paths, ls_norm_pos)
+            input_imgs, ls_norm_pos = self.get_already_cropped_images(img_paths, ls_norm_pos, event_target)
         else:
-            input_imgs, ls_norm_pos = self.crop_images_from_paths(img_paths, ls_norm_pos)
+            input_imgs, ls_norm_pos = self.crop_images_from_paths(img_paths, ls_norm_pos, event_target)
         
 
         if self.mode == 'train' and np.random.rand() < self.augment_props.augment_img_prob:
@@ -281,18 +323,14 @@ if __name__ == '__main__':
     import yaml
     from easydict import EasyDict
 
-    with open('config.yaml', 'r') as f:
+    with open('config_3d.yaml', 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     config = EasyDict(config)
 
-    ds = EventDataset(
-        data_path=config.data.test_path,
-        transforms=None, 
-        mode='test',
-        **config.data.data_cfg
-    )
+    ds_module = EventDataModule(**config.data)
+    ds_module.setup('validate')
 
-    for i, item in enumerate(ds):
+    for i, item in enumerate(ds_module.val_ds):
         imgs, pos, ev = item
         print(imgs.shape)
         print(pos.shape)

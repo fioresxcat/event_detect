@@ -77,8 +77,23 @@ trainer:
 
  
 model:
-  version: x3d_xs
-  n_classes: 3
+  model:
+    class_path: model_3d.X3DLSTMModel
+    init_args:
+      x3d_cfg:
+        version: x3d_xs
+        n_classes: 3
+
+      lstm_cfg:
+        input_size: 2
+        hidden_size: 8
+        num_layers: 2
+        output_size: 8
+        dropout: 0.1
+
+      num_classes: 3
+      classifier_dropout: 0.1
+  
   class_weight:
   - 1.
   - 1.
@@ -114,12 +129,12 @@ data:
     already_cropped: false
     augment_props:
       augment_img_prob: 0.3
-      mask_ball_prob: 1
+      mask_ball_prob: 0.2
       max_mask_ball: 4
 
   training_cfg:
     bs: 16
     shuffle_train: true
-    num_workers: 0
+    num_workers: 8
 
 ckpt_path: null
