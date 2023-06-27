@@ -454,7 +454,26 @@ def crop_img_for_event_cls_3(ev_data_fp, out_dir, split, ball_r, max_invalid_pos
         f.write(bin)
 
 
+# def convert_data_path_from_gpu2_to_156():
+#     for split in ['train', 'val', 'test']:
+#         data_path = f'data/{split}_event_cropped_9_320_128.pkl'
+#         with open(data_path, 'rb') as f:
+#             data = pickle.load(f)
+#         keys = list(data.keys())
+#         for key in keys:
+#             new_key = []
+#             for path in key:
+#                 path = path.replace('gpu2', 'gpu156')
+#                 new_key.append(path)
+#             data[tuple(new_key)] = data.pop(key)
+
+
+
 if __name__ == '__main__':
+<<<<<<< HEAD
+    np.random.seed(42)
+
+=======
 
     # crop_img_for_event_cls_3(
     #     ev_data_fp='data/test_event_new_9.pkl',
@@ -467,8 +486,16 @@ if __name__ == '__main__':
     #     if split != 'train':
     #         continue
     #     ev_data_fp = f'data/{split}_event_new_9.pkl'
+<<<<<<< HEAD
+    #     out_dir = f'cropped_data_320_128/{split}'
+    #     crop_img_for_event_cls_2(ev_data_fp, out_dir, split)
+
+    # convert_data_path_from_gpu2_to_156()
+
+=======
     #     out_dir = f'cropped_data_320_400/{split}'
     #     crop_img_for_event_cls_2(ev_data_fp, out_dir, split, crop_size=(320, 400))
+>>>>>>> 23d5e1e6716875701e3051a06ff81a7b6ed9c21f
 
     with open('data/test_event_new_9_exp71_epoch40_centernet_3_frame_add_no_ball_frame.pkl', 'rb') as f:
         data = pickle.load(f)

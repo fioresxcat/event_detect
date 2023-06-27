@@ -1,5 +1,5 @@
 import torch
-torch.set_float32_matmul_precision('medium')
+torch.set_float32_matmul_precision('high')
 
 import pdb
 import torch.nn as nn
@@ -10,6 +10,7 @@ from typing import List, Tuple, Dict, Optional, Union
 import pytorch_lightning as pl
 from torchmetrics.classification import MulticlassAccuracy, MulticlassF1Score
 from model import MyAccuracy
+
 # class X3DModel(nn.Module):
 #     def __init__(self, version):
 #         super().__init__()

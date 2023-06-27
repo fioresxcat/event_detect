@@ -1,7 +1,8 @@
 # pytorch_lightning==1.9.5
 seed_everything: true
 trainer:
-  devices: [0]
+  devices:
+  - 0
   max_epochs: 100
   min_epochs: 30
   accelerator: gpu
@@ -119,6 +120,7 @@ data:
       max_mask_ball: 4
 
   training_cfg:
+    bs: 32
     bs: 32
     shuffle_train: true
     num_workers: 8

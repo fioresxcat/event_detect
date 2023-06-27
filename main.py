@@ -2,7 +2,7 @@ import os
 import json
 from pathlib import Path
 import torch
-torch.set_float32_matmul_precision('medium')
+torch.set_float32_matmul_precision('high')
 import numpy as np
 import yaml
 import shutil
