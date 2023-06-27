@@ -4,3 +4,5 @@ cropped_data_128_128/
 cropped_data_320_128/
 data/
 lightning_logs/
+cropped_data_320_128_exp38_fixed_mask_ball/
+

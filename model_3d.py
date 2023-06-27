@@ -1,5 +1,5 @@
 import torch
-torch.set_float32_matmul_precision('medium')
+torch.set_float32_matmul_precision('high')
 
 import pdb
 import torch.nn as nn
@@ -9,6 +9,7 @@ from typing import List, Tuple, Dict, Optional, Union
 import pytorch_lightning as pl
 from torchmetrics.classification import MulticlassAccuracy, MulticlassF1Score
 from model import MyAccuracy
+
 # class X3DModel(nn.Module):
 #     def __init__(self, version):
 #         super().__init__()
@@ -72,10 +73,10 @@ class X3DModule(pl.LightningModule):
         acc = getattr(self, f'{split}_acc')
         acc(logits, labels)
 
-        if split in ['val', 'test']:
-            probs = torch.softmax(logits, dim=1)
-            for prob, label in zip(probs, labels):
-                print('probs:', torch.round(input=prob, decimals=2), 'label:', label)
+        # if split in ['val', 'test']:
+        #     probs = torch.softmax(logits, dim=1)
+        #     for prob, label in zip(probs, labels):
+        #         print('probs:', torch.round(input=prob, decimals=2), 'label:', label)
 
         self.log_dict({
             f'{split}_loss': loss,

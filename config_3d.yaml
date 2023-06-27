@@ -1,7 +1,8 @@
 # pytorch_lightning==1.9.5
 seed_everything: true
 trainer:
-  devices: [0]
+  devices:
+  - 0
   max_epochs: 100
   min_epochs: 30
   accelerator: gpu
@@ -13,7 +14,7 @@ trainer:
   logger:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
-      save_dir: 'ckpt_3d/exp2_ce_loss_remake_label_182_182_320_128'
+      save_dir: 'ckpt_3d/exp4_ce_loss_remake_label_182_182_320_128_final_data'
       name: ''
       version: ''
 
@@ -113,7 +114,7 @@ data:
       max_mask_ball: 0
 
   training_cfg:
-    bs: 16
+    bs: 32
     shuffle_train: true
     num_workers: 8
 

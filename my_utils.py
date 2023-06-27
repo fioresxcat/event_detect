@@ -358,15 +358,33 @@ def crop_img_for_event_cls_2(ev_data_fp, out_dir, split, crop_size=(320, 128)):
         f.write(bin)
 
 
+# def convert_data_path_from_gpu2_to_156():
+#     for split in ['train', 'val', 'test']:
+#         data_path = f'data/{split}_event_cropped_9_320_128.pkl'
+#         with open(data_path, 'rb') as f:
+#             data = pickle.load(f)
+#         keys = list(data.keys())
+#         for key in keys:
+#             new_key = []
+#             for path in key:
+#                 path = path.replace('gpu2', 'gpu156')
+#                 new_key.append(path)
+#             data[tuple(new_key)] = data.pop(key)
+
+
+
 if __name__ == '__main__':
     np.random.seed(42)
 
-    for split in ['test', 'val', 'train']:
-        if split != 'train':
-            continue
-        ev_data_fp = f'data/{split}_event_new_9.pkl'
-        out_dir = f'cropped_data_320_128/{split}'
-        crop_img_for_event_cls_2(ev_data_fp, out_dir, split)
+    # for split in ['test', 'val', 'train']:
+    #     if split != 'train':
+    #         continue
+    #     ev_data_fp = f'data/{split}_event_new_9.pkl'
+    #     out_dir = f'cropped_data_320_128/{split}'
+    #     crop_img_for_event_cls_2(ev_data_fp, out_dir, split)
+
+    # convert_data_path_from_gpu2_to_156()
+
 
     # with open('data/test_event_cropped_9_128_128.pkl', 'rb') as f:
     #     data = pickle.load(f)
