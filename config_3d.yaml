@@ -121,7 +121,6 @@ data:
 
   training_cfg:
     bs: 32
-    bs: 32
     shuffle_train: true
     num_workers: 8
 
