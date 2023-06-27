@@ -4,5 +4,10 @@ cropped_data_128_128/
 cropped_data_320_128/
 data/
 lightning_logs/
+<<<<<<< HEAD
 cropped_data_320_128_exp38_fixed_mask_ball/
 
+=======
+masked_red_data/
+test/
+>>>>>>> 23d5e1e6716875701e3051a06ff81a7b6ed9c21f

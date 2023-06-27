@@ -90,32 +90,37 @@ model:
   ev_diff_thresh: 0.25
         
 data:
-  # train_path: 'data/train_event_new_9.pkl'
-  # val_path: 'data/val_event_new_9.pkl'
-  # test_path: 'data/test_event_new_9.pkl'
+  train_path: 'data/train_event_new_9.pkl'
+  val_path: 'data/val_event_new_9.pkl'
+  test_path: 'data/test_event_new_9.pkl'
+  predict_path: 'data/test_event_new_9.pkl'
 
-  train_path: data/train_event_cropped_9_320_128.pkl
-  val_path: data/val_event_cropped_9_320_128.pkl
-  test_path: data/test_event_cropped_9_320_128.pkl
-  predict_path: data/test_event_cropped_9_320_128.pkl
+  # train_path: data/train_event_cropped_9_320_128.pkl
+  # val_path: data/val_event_cropped_9_320_128.pkl
+  # test_path: data/test_event_cropped_9_320_128.pkl
+  # predict_path: data/test_event_cropped_9_320_128.pkl
 
 
   data_cfg: 
     n_input_frames: 9
     n_sample_limit: 1.0e+09
     crop_size:
+    - 320
+    - 400
+    input_size:
     - 182
     - 182
+    ball_radius: 8
     do_augment: true
-    already_cropped: true
+    already_cropped: false
     augment_props:
       augment_img_prob: 0.3
-      mask_ball_prob: 0
-      max_mask_ball: 0
+      mask_ball_prob: 1
+      max_mask_ball: 4
 
   training_cfg:
     bs: 32
     shuffle_train: true
-    num_workers: 8
+    num_workers: 0
 
 ckpt_path: null
