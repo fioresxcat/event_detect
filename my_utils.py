@@ -452,13 +452,14 @@ def crop_img_for_event_cls_3(ev_data_fp, out_dir, split, ball_r, max_invalid_pos
 
 if __name__ == '__main__':
 
-    crop_img_for_event_cls_3(
-        ev_data_fp='data/test_event_new_9.pkl',
-        out_dir='cropped_data_320_400/',
-        split='test',
-        ball_r = 8,
-        crop_size=(320, 400)
-    )
+    # crop_img_for_event_cls_3(
+    #     ev_data_fp='data/test_event_new_9.pkl',
+    #     out_dir='cropped_data_320_400/',
+    #     split='test',
+    #     ball_r = 8,
+    #     crop_size=(320, 400)
+    # )
+
     # for split in ['test', 'val', 'train']:
     #     if split != 'train':
     #         continue
@@ -466,11 +467,11 @@ if __name__ == '__main__':
     #     out_dir = f'cropped_data_320_400/{split}'
     #     crop_img_for_event_cls_2(ev_data_fp, out_dir, split, crop_size=(320, 400))
 
-    # with open('data/test_event_cropped_9_128_128.pkl', 'rb') as f:
-    #     data = pickle.load(f)
-    # items = list(data.items())
-    # print(items[10])
-    # pdb.set_trace()
+    with open('/data2/tungtx2/datn/event_detect/data/yolo_train_event_new_9.pkl', 'rb') as f:
+        data = pickle.load(f)
+    items = list(data.items())
+    print(items[10])
+    pdb.set_trace()
 
     # for split in ['train', 'val', 'test']:
     #     ev_data_fp = f'data/gpu2_event_{split}_dict_9.pkl'
