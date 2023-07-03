@@ -30,7 +30,7 @@ class MyLightningCLI(LightningCLI):
 
 def cli_main():
     cli = MyLightningCLI(
-        X3DLSTMModule,
+        X3DModule,
         EventDataModule3D,
         parser_kwargs={"parser_mode": "omegaconf"},
         save_config_overwrite=False

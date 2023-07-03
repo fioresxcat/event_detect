@@ -148,7 +148,7 @@ class EventDataset(Dataset):
                 if tuple(pos) != (-1, -1):
                     abs_pos = (int(pos[0] * orig_img.shape[1]), int(pos[1] * orig_img.shape[0]))
                     cropped_pos = (abs_pos[0] - xmin, abs_pos[1] - ymin)
-                    cropped_img = cv2.circle(cropped_img, cropped_pos, self.ball_radius, (0, 0, 255), -1)
+                    cropped_img = cv2.circle(cropped_img, cropped_pos, self.ball_radius, (255, 0, 0), -1)
 
             # resize
             cropped_img = cv2.resize(cropped_img, self.input_size)
@@ -160,7 +160,7 @@ class EventDataset(Dataset):
         # os.makedirs(out_dir, exist_ok=True)
         # for i, img in enumerate(input_imgs):
         #     img_fn = Path(img_paths[i]).parent.name + '_' + Path(img_paths[i]).name
-        #     cv2.imwrite(f'{out_dir}/{img_fn}', img)
+        #     cv2.imwrite(f'{out_dir}/{img_fn}', cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
         # pdb.set_trace()
 
         return input_imgs, ls_norm_pos

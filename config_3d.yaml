@@ -14,7 +14,7 @@ trainer:
   logger:
     class_path: pytorch_lightning.loggers.TensorBoardLogger
     init_args:
-      save_dir: 'ckpt_3d/exp1_crop_320_400_resize_182_182_mask_red_ball'
+      save_dir: 'ckpt_3d/exp2_crop_320_400_resize_182_182_mask_red_ball'
       name: ''
       version: ''
 
@@ -120,7 +120,7 @@ data:
       max_mask_ball: 4
 
   training_cfg:
-    bs: 32
+    bs: 48
     shuffle_train: true
     num_workers: 8
 
