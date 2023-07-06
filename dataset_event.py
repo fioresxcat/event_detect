@@ -60,6 +60,7 @@ class EventDataset(Dataset):
         n_sample_limit,
         crop_size,
         input_size,
+        mask_red_ball,
         ball_radius,
         already_cropped,
         do_augment=False,
@@ -75,6 +76,7 @@ class EventDataset(Dataset):
         self.n_sample_limit = int(n_sample_limit)
         self.crop_size = crop_size
         self.input_size = input_size
+        self.mask_red_ball = mask_red_ball
         self.ball_radius = ball_radius
         self.already_cropped = already_cropped
         self.transforms = transforms
@@ -102,6 +104,7 @@ class EventDataset(Dataset):
                 mask_indices = np.random.choice(list(range(len(ls_norm_pos))), size=np.random.randint(0, max_size+1))
                 for idx in mask_indices:
                     ls_norm_pos[idx] = (-1, -1)
+
             # else:   # mask first half or second half
             #     first_part_pos = [pos for i, pos in enumerate(ls_norm_pos) if i <= len(ls_norm_pos)//2]
             #     second_part_pos = [pos for i, pos in enumerate(ls_norm_pos) if i >= len(ls_norm_pos)//2]
@@ -135,15 +138,17 @@ class EventDataset(Dataset):
         # crop imgs
         input_imgs = []
         for i, fp in enumerate(img_paths):
-            orig_img = cv2.imread(str(fp))
+            with open(fp, 'rb') as in_file:
+                orig_img = self.jpeg_reader.decode(in_file.read(), 0)
             cropped_img = orig_img[ymin:ymax, xmin:xmax]
 
             # mask red ball
-            pos = ls_norm_pos[i]
-            if tuple(pos) != (-1, -1):
-                abs_pos = (int(pos[0] * orig_img.shape[1]), int(pos[1] * orig_img.shape[0]))
-                cropped_pos = (abs_pos[0] - xmin, abs_pos[1] - ymin)
-                cropped_img = cv2.circle(cropped_img, cropped_pos, self.ball_radius, (0, 0, 255), -1)
+            if self.mask_red_ball:
+                pos = ls_norm_pos[i]
+                if tuple(pos) != (-1, -1):
+                    abs_pos = (int(pos[0] * orig_img.shape[1]), int(pos[1] * orig_img.shape[0]))
+                    cropped_pos = (abs_pos[0] - xmin, abs_pos[1] - ymin)
+                    cropped_img = cv2.circle(cropped_img, cropped_pos, self.ball_radius, (255, 0, 0), -1)
 
             # resize
             cropped_img = cv2.resize(cropped_img, self.input_size)
@@ -155,7 +160,7 @@ class EventDataset(Dataset):
         # os.makedirs(out_dir, exist_ok=True)
         # for i, img in enumerate(input_imgs):
         #     img_fn = Path(img_paths[i]).parent.name + '_' + Path(img_paths[i]).name
-        #     cv2.imwrite(f'{out_dir}/{img_fn}', img)
+        #     cv2.imwrite(f'{out_dir}/{img_fn}', cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
         # pdb.set_trace()
 
         return input_imgs, ls_norm_pos

@@ -27,13 +27,14 @@ class EventDataset3D(EventDataset):
         n_input_frames,
         n_sample_limit,
         crop_size,
-        input_size, 
+        input_size,
+        mask_red_ball,
         ball_radius,
         already_cropped,
         do_augment=False,
         augment_props={},
     ):
-        super(EventDataset3D, self).__init__(data_path, transforms, mode, n_input_frames, n_sample_limit, crop_size, input_size, ball_radius, already_cropped, do_augment, augment_props)
+        super(EventDataset3D, self).__init__(data_path, transforms, mode, n_input_frames, n_sample_limit, crop_size, input_size, mask_red_ball, ball_radius, already_cropped, do_augment, augment_props)
         self.normalize_video = NormalizeVideo(
             mean = [0.45, 0.45, 0.45],
             std = [0.225, 0.225, 0.225]
@@ -46,9 +47,9 @@ class EventDataset3D(EventDataset):
 
         # process img
         if self.already_cropped:
-            input_imgs, ls_norm_pos = self.get_already_cropped_images(img_paths, ls_norm_pos)
+            input_imgs, ls_norm_pos = self.get_already_cropped_images(img_paths, ls_norm_pos, event_target)
         else:
-            input_imgs, ls_norm_pos = self.crop_images_from_paths(img_paths, ls_norm_pos)
+            input_imgs, ls_norm_pos = self.crop_images_from_paths(img_paths, ls_norm_pos, event_target)
         
 
         if self.mode == 'train' and self.do_augment and np.random.rand() < self.augment_props.augment_img_prob:
