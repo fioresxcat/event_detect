@@ -2,14 +2,20 @@ import torch
 torch.set_float32_matmul_precision('high')
 
 import pdb
+from pathlib import Path
+import shutil
+from copy import deepcopy
+import cv2
 import torch.nn as nn
 import torch.nn.functional as F
+import torchmetrics
 import numpy as np
 from easydict import EasyDict
 from typing import List, Tuple, Dict, Optional, Union
 import pytorch_lightning as pl
 from torchmetrics.classification import MulticlassAccuracy, MulticlassF1Score
-from model import MyAccuracy
+import os
+from metric import NormalAccuracy, RelaxedAccuracy
 
 # class X3DModel(nn.Module):
 #     def __init__(self, version):
@@ -82,11 +88,11 @@ class X3DLSTMModule(pl.LightningModule):
 
 
     def _init_loss_and_metrics(self):
-        self.train_acc = MyAccuracy(self.ev_diff_thresh)
-        self.val_acc = MyAccuracy(self.ev_diff_thresh)
-        self.test_acc = MyAccuracy(self.ev_diff_thresh)
+        self.train_acc = NormalAccuracy(self.ev_diff_thresh)
+        self.val_acc = NormalAccuracy(self.ev_diff_thresh)
+        self.test_acc = NormalAccuracy(self.ev_diff_thresh)
 
-        self.predict_acc = MyAccuracy(self.ev_diff_thresh)
+        self.predict_acc = NormalAccuracy(self.ev_diff_thresh)
         self.preds, self.labels = torch.empty(size=(0, 3)), torch.empty(size=(0, 3))
 
 
@@ -170,8 +176,11 @@ class X3DModule(pl.LightningModule):
         class_weight: List[float],
         learning_rate: float,
         reset_optimizer: bool,
-        pos_weight: float,
-        ev_diff_thresh: float
+        loss: nn.Module,
+        acc: torchmetrics.Metric,
+        relaxed_acc: torchmetrics.Metric,
+        pce: torchmetrics.Metric,
+        smooth_pce: torchmetrics.Metric,
     ):
         super().__init__()
         self.model = torch.hub.load('facebookresearch/pytorchvideo', version, pretrained=True)
@@ -179,28 +188,33 @@ class X3DModule(pl.LightningModule):
         self.n_classes = n_classes
         self.learning_rate = learning_rate
         self.reset_optimizer = reset_optimizer
-        self.pos_weight = pos_weight
-        self.ev_diff_thresh = ev_diff_thresh
         self.class_weight = class_weight
-        self._init_loss_and_metrics()
 
+        # loss and metrics
+        self.criterion = loss
 
-    def _init_loss_and_metrics(self):
-        self.train_acc = MyAccuracy(self.ev_diff_thresh)
-        self.val_acc = MyAccuracy(self.ev_diff_thresh)
-        self.test_acc = MyAccuracy(self.ev_diff_thresh)
+        self.train_acc = acc
+        self.val_acc = deepcopy(acc)
+        self.test_acc = deepcopy(acc)
 
-        self.predict_acc = MyAccuracy(self.ev_diff_thresh)
+        self.train_relaxed_acc = relaxed_acc
+        self.val_relaxed_acc = deepcopy(relaxed_acc)
+        self.test_relaxed_acc = deepcopy(relaxed_acc)
+
+        self.train_pce = pce
+        self.val_pce = deepcopy(pce)
+        self.test_pce = deepcopy(pce)
+
+        self.train_smooth_pce = smooth_pce
+        self.val_smooth_pce = deepcopy(smooth_pce)
+        self.test_smooth_pce = deepcopy(smooth_pce)
+
         self.preds, self.labels = torch.empty(size=(0, 3)), torch.empty(size=(0, 3))
 
 
     def compute_logits_and_losses(self, imgs, pos, labels):
         logits = self.model(imgs)
-        loss = F.cross_entropy(
-            logits,
-            labels,
-            weight=torch.tensor(self.class_weight, device=self.device),
-        )
+        loss = self.criterion(logits, labels)
         return logits, loss
 
 
@@ -215,6 +229,15 @@ class X3DModule(pl.LightningModule):
         acc = getattr(self, f'{split}_acc')
         acc(logits, labels)
 
+        relaxed_acc = getattr(self, f'{split}_relaxed_acc')
+        relaxed_acc(logits, labels)
+
+        pce = getattr(self, f'{split}_pce')
+        pce(logits, labels)
+
+        smooth_pce = getattr(self, f'{split}_smooth_pce')
+        smooth_pce(logits, labels)
+
         # if split in ['val', 'test']:
         #     probs = torch.softmax(logits, dim=1)
         #     for prob, label in zip(probs, labels):
@@ -223,6 +246,9 @@ class X3DModule(pl.LightningModule):
         self.log_dict({
             f'{split}_loss': loss,
             f'{split}_acc': acc,
+            f'{split}_relaxed_acc': relaxed_acc,
+            f'{split}_pce': pce,
+            f'{split}_smooth_pce': smooth_pce,
         }, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
         return loss
@@ -235,7 +261,92 @@ class X3DModule(pl.LightningModule):
         return self.step(batch, batch_idx, 'val')
     
     def test_step(self, batch, batch_idx):
-        return self.step(batch, batch_idx, 'test')
+        imgs, pos, labels = batch
+        logits, loss = self.compute_logits_and_losses(imgs, pos, labels)
+
+        acc = getattr(self, f'test_acc')
+        acc(logits, labels)
+
+        relaxed_acc = getattr(self, f'test_relaxed_acc')
+        relaxed_acc(logits, labels)
+
+        pce = getattr(self, f'test_pce')
+        pce(logits, labels)
+
+        smooth_pce = getattr(self, f'test_smooth_pce')
+        smooth_pce(logits, labels)
+
+
+        self.log_dict({
+            f'test_loss': loss,
+            f'test_acc': acc,
+            f'test_relaxed_acc': relaxed_acc,
+            f'test_pce': pce,
+            f'test_smooth_pce': smooth_pce,
+        }, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+
+        # # save wrong case for debug
+        # bs = self.trainer.datamodule.training_cfg.bs
+        # all_img_paths = self.trainer.datamodule.test_ds.ls_img_paths
+        # batch_img_paths = all_img_paths[(bs*batch_idx):(bs*(batch_idx+1))]
+
+        # # false_indices, pred_probs, gt_probs, extended_false_indices, extended_pred_probs, extended_gt_probs = acc.get_false_indices(logits, labels)
+        # false_indices, pred_probs, gt_probs = relaxed_acc.get_false_indices(logits, labels)
+        # acc_type = 'relaxed_acc'
+        
+        # false_img_paths = [batch_img_paths[i] for i in false_indices]
+        # ls_ball_pos = pos[false_indices].tolist()
+
+        # for img_paths, pred_prob, gt_prob, ball_pos in zip(false_img_paths, pred_probs, gt_probs, ls_ball_pos):
+        #     ls_stem = [Path(img_path).stem for img_path in img_paths]
+        #     ls_frame_idx = [int(stem.split('_')[-1]) for stem in ls_stem]
+        #     min_fr = min(ls_frame_idx)
+        #     max_fr = max(ls_frame_idx)
+        #     game_name = Path(img_paths[0]).parent.stem
+        #     save_dir = os.path.join(self.save_debug_dir, acc_type, game_name, f'{min_fr}-{max_fr}')
+        #     os.makedirs(save_dir, exist_ok=True)
+            
+        #     # write probs
+        #     with open(os.path.join(save_dir, 'probs.txt'), 'w') as f:
+        #         f.write(f'pred probs: {pred_prob}\n')
+        #         f.write(f'gt probs: {gt_prob}\n')
+            
+        #     abs_pos = np.array(ball_pos) * np.array([1920, 1080])
+        #     abs_pos = abs_pos.astype(int).tolist()
+
+        #     # write cropped frames
+        #     median_cx = np.median([pos[0] for pos in abs_pos])
+        #     median_cy = np.median([pos[1] for pos in abs_pos])
+        #     xmin = int(max(0, median_cx - self.debug_crop_size[0]//2))
+        #     xmax = int(min(median_cx + self.debug_crop_size[0]//2, 1920))
+        #     ymin = int(max(0, median_cy - self.debug_crop_size[1] // 3))  # crop only 1/3 on top
+        #     ymax = int(min(median_cy + self.debug_crop_size[1]*2//3, 1080))    # crop 2/3 on bottom
+
+        #     # write original image
+        #     for img_idx, img_fp in enumerate(img_paths):
+        #         img = cv2.imread(str(img_fp))
+        #         img = cv2.circle(img, tuple(abs_pos[img_idx]), 20, (0, 0, 255), 3)
+        #         resized = cv2.resize(img, (720, 480))
+        #         cv2.imwrite(os.path.join(save_dir, Path(img_fp).name), resized)
+
+        #         cropped = img[ymin:ymax, xmin:xmax]
+        #         cv2.imwrite(os.path.join(save_dir, f'cropped_{Path(img_fp).name}'), cropped)
+
+
+        #     with open(os.path.join(save_dir, 'ball.txt'), 'w') as f:
+        #         for i, fr_idx in enumerate(ls_frame_idx):
+        #             norm_pos = ball_pos[i]
+        #             abs_pos = (int(norm_pos[0]*1920), int(norm_pos[1]*1080))
+        #             f.write(f'{fr_idx}: {abs_pos}\n')
+            
+
+    def on_test_start(self) -> None:
+        ckpt_path = self.trainer.ckpt_path
+        exp_name = Path(ckpt_path).parent.name
+        epoch = Path(ckpt_path).stem.split('-')[0]
+        self.save_debug_dir = os.path.join('debug', f'{exp_name}_{epoch}')
+        self.debug_crop_size = self.trainer.datamodule.test_ds.crop_size
+
     
 
     def configure_optimizers(self):

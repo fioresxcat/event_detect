@@ -30,11 +30,13 @@ class EventDataset3D(EventDataset):
         input_size,
         mask_red_ball,
         ball_radius,
+        thickness,
+        tab_xmax_offset,
         already_cropped,
         do_augment=False,
         augment_props={},
     ):
-        super(EventDataset3D, self).__init__(data_path, transforms, mode, n_input_frames, n_sample_limit, crop_size, input_size, mask_red_ball, ball_radius, already_cropped, do_augment, augment_props)
+        super(EventDataset3D, self).__init__(data_path, transforms, mode, n_input_frames, n_sample_limit, crop_size, input_size, mask_red_ball, ball_radius, thickness, tab_xmax_offset, already_cropped, do_augment, augment_props)
         self.normalize_video = NormalizeVideo(
             mean = [0.45, 0.45, 0.45],
             std = [0.225, 0.225, 0.225]
@@ -43,15 +45,10 @@ class EventDataset3D(EventDataset):
 
     def __getitem__(self, index):
         img_paths = self.ls_img_paths[index]
-        ls_norm_pos, event_target = self.ls_labels[index]
-
-        # process img
-        if self.already_cropped:
-            input_imgs, ls_norm_pos = self.get_already_cropped_images(img_paths, ls_norm_pos, event_target)
-        else:
-            input_imgs, ls_norm_pos = self.crop_images_from_paths(img_paths, ls_norm_pos, event_target)
+        labels = self.ls_labels[index]
+        ls_norm_pos, event_target, ev_type, mask_fp, tab_bb_fp = labels
+        input_imgs, ls_norm_pos = self.get_masked_images_new(img_paths, labels)
         
-
         if self.mode == 'train' and self.do_augment and np.random.rand() < self.augment_props.augment_img_prob:
             transformed = self.transforms(
                 image=input_imgs[0],
@@ -68,6 +65,12 @@ class EventDataset3D(EventDataset):
             transformed_imgs = np.stack(transformed_imgs, axis=0)
         else:
             transformed_imgs = np.stack(input_imgs, axis=0)   # shape 9 x h x w x 3
+
+        # for i, img in enumerate(transformed_imgs):
+        #     cv2.imwrite('a.png', cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+        #     print(f'just save image {i}')
+        #     pdb.set_trace()
+
 
         # normalize
         transformed_imgs = torch.from_numpy(transformed_imgs)
@@ -158,6 +161,7 @@ if __name__ == '__main__':
     with open('config_3d.yaml', 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     config = EasyDict(config)
+    config.data.training_cfg.num_workers = 0
 
     ds_module = EventDataModule3D(**config.data)
     ds_module.setup('fit')
@@ -167,8 +171,8 @@ if __name__ == '__main__':
         imgs, pos, ev = item
         print(imgs.shape)
         print(pos.shape)
-        print('img paths: ', ds.ls_img_paths[i])
-        print('ev_probs: ', ev)
+        # print('img paths: ', ds.ls_img_paths[i])
+        # print('ev_probs: ', ev)
         # break
     pdb.set_trace()
     print('ok')

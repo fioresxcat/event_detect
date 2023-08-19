@@ -12,11 +12,9 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "fit",
+                "test",
                 "--config",
-                "config.yaml",
-                "--save_config_callback",
-                "None"
+                "/data/tungtx2/datn/event_detect/ckpt_3d/exp2_crop_320_400_resize_182_182_mask_red_ball/predict_config.yaml",
             ]
         }
     ]

@@ -13,6 +13,9 @@ from dataset_event import EventDataModule
 from model import EventClassifierModule
 from dataset_event_3d import EventDataModule3D
 from model_3d import X3DModule, X3DLSTMModule
+import torchmetrics
+from pytorch_lightning.loggers import WandbLogger
+from metric import NormalAccuracy, RelaxedAccuracy
 
 
 class MyLightningCLI(LightningCLI):

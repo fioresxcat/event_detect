@@ -1,9 +1,9 @@
 # pytorch_lightning==1.9.5
-seed_everything: true
+# seed_everything: true
 trainer:
   devices:
   - 0
-  max_epochs: 100
+  max_epochs: 200
   min_epochs: 30
   accelerator: gpu
   precision: 16
@@ -12,20 +12,21 @@ trainer:
   profiler: null
 
   logger:
-    class_path: pytorch_lightning.loggers.TensorBoardLogger
+    class_path: pytorch_lightning.loggers.WandbLogger
     init_args:
-      save_dir: 'ckpt_3d/exp2_crop_320_400_resize_182_182_mask_red_ball'
-      name: ''
+      save_dir: 'ckpt_3d/exp20_mask_red_182_182'
+      name: 'event_detect_add_table'
       version: ''
+      project: 'event_detect'
 
   callbacks:
     - class_path: pytorch_lightning.callbacks.ModelCheckpoint
       init_args:
         dirpath: ${trainer.logger.init_args.save_dir}
-        filename: '{epoch}-{train_loss:.3f}-{val_loss:.3f}-{train_acc:.3f}-{val_acc:.3f}'
-        monitor: val_acc
-        save_top_k: 3
-        mode: max
+        filename: '{epoch}-{train_loss:.3f}-{val_loss:.3f}-{train_acc:.3f}-{train_relaxed_acc:.3f}-{val_acc:.3f}-{val_relaxed_acc:.3f}-{val_pce:.3f}-{val_smooth_pce:.3f}'
+        monitor: val_loss
+        save_top_k: 5
+        mode: min
         every_n_epochs: 1
         auto_insert_metric_name: true
 
@@ -81,46 +82,77 @@ model:
   version: x3d_xs
   n_classes: 3
   class_weight:
-  - 1.
-  - 1.
-  - 1.
+  - 1. # bounce
+  - 1. # net
+  - 1.  # empty
   learning_rate: 1.0e-03
-  reset_optimizer: true
-  pos_weight: 0.7
-  ev_diff_thresh: 0.25
+  reset_optimizer: false
+  loss:
+    class_path: loss.MyCrossEntropyLoss
+    init_args:
+      class_weight: ${model.class_weight}
+  acc:
+    class_path: metric.NormalAccuracy
+  relaxed_acc:
+    class_path: metric.RelaxedAccuracy
+  pce:
+    class_path: metric.PCE
+    init_args:
+      threshold: 0.5
+  smooth_pce:
+    class_path: metric.SmoothPCE
+    init_args:
+      ev_diff_thresh: 0.25
         
 data:
-  train_path: 'data/train_event_new_9_exp71_epoch40_centernet_3_frame_add_no_ball_frame.pkl'
-  val_path: 'data/val_event_new_9_exp71_epoch40_centernet_3_frame_add_no_ball_frame.pkl'
-  test_path: 'data/test_event_new_9_exp71_epoch40_centernet_3_frame_add_no_ball_frame.pkl'
-  predict_path: 'data/test_event_new_9_exp71_epoch40_centernet_3_frame_add_no_ball_frame.pkl'
+  # train_path: 'data_resplit/exclude_minus_1_train_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl'
+  # val_path: 'data_resplit/exclude_minus_1_val_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl'
+  # test_path: 'data_resplit/exclude_minus_1_test_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl'
+  # predict_path: 'data_resplit/exclude_minus_1_test_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl'
 
-  # train_path: data/train_event_cropped_9_320_128.pkl
-  # val_path: data/val_event_cropped_9_320_128.pkl
-  # test_path: data/test_event_cropped_9_320_128.pkl
-  # predict_path: data/test_event_cropped_9_320_128.pkl
+  # train_path: data_resplit/event_train_dict_9_yolo_1280.pkl
+  # val_path: data_resplit/event_val_dict_9_yolo_1280.pkl
+  # test_path: data_resplit/event_test_dict_9_yolo_1280.pkl
+  # predict_path: data_resplit/event_test_dict_9_yolo_1280.pkl
 
+  # train_path: 'data_resplit/exclude_minus_1_train_val_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl'
+  # val_path: 'data_resplit/exclude_minus_1_test_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl'
+  # test_path: 'data_resplit/exclude_minus_1_test_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl'
+  # predict_path: 'data_resplit/exclude_minus_1_test_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl'
+
+  train_path: data_resplit/train_event_new_9_exp90_centernet_no_asl_640.pkl
+  val_path: data_resplit/val_event_new_9_exp90_centernet_no_asl_640.pkl
+  test_path: data_resplit/test_event_new_9_exp90_centernet_no_asl_640.pkl
+  predict_path: data_resplit/test_event_new_9_exp90_centernet_no_asl_640.pkl
 
   data_cfg: 
     n_input_frames: 9
     n_sample_limit: 1.0e+09
     crop_size:
+    # - 360
+    # - 150
     - 320
-    - 400
+    - 128
+
     input_size:
+    # - 256
+    # - 182
     - 182
     - 182
+
     mask_red_ball: true
-    ball_radius: 8
+    ball_radius: 12  # on original 1920 x 1080 image
+    thickness: -1
+    tab_xmax_offset: 0
     do_augment: true
     already_cropped: false
     augment_props:
-      augment_img_prob: 0.3
+      augment_img_prob: 0.35
       mask_ball_prob: 0.15
       max_mask_ball: 4
 
   training_cfg:
-    bs: 48
+    bs: 32
     shuffle_train: true
     num_workers: 8
 

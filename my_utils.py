@@ -214,38 +214,50 @@ def gen_data_for_ball_detection(pkl_fp, save_dir):
 
 
 def gen_data_for_event_cls(ev_data_fp, split):
-    model_name = 'exp71_epoch40'
+    model_name = 'exp90_centernet_no_asl_640'
 
     with open(ev_data_fp, 'rb') as f:
         ev_data = pickle.load(f)
+        
     all_img_dict = {}
     for res_split in ['train', 'val', 'test']:
-        result_fp = f'results/{model_name}/{res_split}/result.json'
+        result_fp = f'results/{model_name}/{res_split}_add_no_ball_frames/result.json'
         result_data = json.load(open(result_fp))
         all_img_dict.update(result_data['img_dict'])
 
     all_img_paths = sorted(list(all_img_dict.keys()))
     final_dict = {}
     max_invalid_cnt = 4     # cần có limit, vì có thể model infer là model 3 frames, có thể ko infer hết các frames trong bộ event
-    for img_paths, labels in ev_data.items():
+    sorted_paths = sorted(ev_data.keys())
+    for img_paths in sorted_paths:
+        labels = ev_data[img_paths]
         n_invalid_cnt = 0
         ls_pos = []
-        for fp in img_paths:
-            fp = fp.replace('/data/tungtx2/datn/dataset/', '/data2/tungtx2/datn/ttnet/dataset/')
+        for fp_idx, fp in enumerate(img_paths):
+            fp = fp.replace('/data/tungtx2/datn/dataset/', '/data2/tungtx2/datn/ttnet/dataset/')    # thay path trong file ev dict tu 245 thanh gpu2 de match voi file result
             if fp in all_img_paths:
-                pred = (all_img_dict[fp]['pred'][0]/512, all_img_dict[fp]['pred'][1]/512)
-                ls_pos.append(pred)
+                pos = (all_img_dict[fp]['pred'][0]/640, all_img_dict[fp]['pred'][1]/640)
+                print('fp oke')
             else:
-                ls_pos.append((-1, -1))
+                print('fp not in all_img_paths')
+                pos = labels[0][fp_idx]
+            
+            # pdb.set_trace()
+            if any(el<=0 for el in pos):
+                pos = (-1, -1)
                 n_invalid_cnt += 1
+            ls_pos.append(pos)
 
         if n_invalid_cnt <= max_invalid_cnt:
-            final_dict[tuple(img_paths)] = (ls_pos, labels[1])
+            final_dict[tuple(img_paths)] = (ls_pos, labels[1], labels[2], labels[3], labels[4])
     
     bin = pickle.dumps(final_dict)
-    with open(f'data/{split}_event_new_9_exp71_epoch40_centernet_3_frame_add_no_ball_frame.pkl', 'wb') as f:
+    with open(f'data_resplit/{split}_event_new_9_{model_name}.pkl', 'wb') as f:
         f.write(bin)
+    
+    print(f'Done {split}')
 
+    
 
 def crop_img_for_event_cls(ev_data_fp, out_dir, split, crop_size=128):
     with open(ev_data_fp, 'rb') as f:
@@ -470,10 +482,40 @@ def crop_img_for_event_cls_3(ev_data_fp, out_dir, split, ball_r, max_invalid_pos
 
 
 if __name__ == '__main__':
-<<<<<<< HEAD
     np.random.seed(42)
 
-=======
+    # for split in ['train', 'val', 'test']:
+    #     # with open(f'data_resplit/{split}_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl', 'rb') as f:
+    #     with open(f'data_resplit/exclude_minus_1_{split}_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl', 'rb') as f:
+    #         data = pickle.load(f)
+    #     items = list(data.items())
+    #     print(f'{split}: {len(items)}')
+    #     print(items[100])
+    #     # ev_probs = [item[1][1] for item in items]
+    #     # bounce_probs = [p[0] for p in ev_probs]
+    #     # net_probs = [p[1] for p in ev_probs]
+    #     # print(f'num bounce == 1:', sum([1 for p in bounce_probs if p == 1]))
+    #     # print(f'num 0 < bounce <= 1: ', sum([1 for p in bounce_probs if 0 < p <= 1]))
+    #     # print(f'num bounce == 0: ', sum([1 for p in bounce_probs if p == 0]))
+    #     # print(f'num net == 1:', sum([1 for p in net_probs if p == 1]))
+    #     # print(f'num 0 < net <= 1: ', sum([1 for p in net_probs if 0 < p <= 1]))
+    #     # print(f'num net == 0: ', sum([1 for p in net_probs if p == 0]))
+    #     # print(f'num empty == 1 (bouce and net == 0): ', sum([1 for p in ev_probs if p[0] == 0 and p[1] == 0]))
+    #     pdb.set_trace()
+
+
+#     with open(f'data_resplit/exclude_minus_1_train_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl', 'rb') as f:
+#         data_train = pickle.load(f)
+
+#     with open(f'data_resplit/exclude_minus_1_val_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl', 'rb') as f:
+#         data_val = pickle.load(f)
+
+#     data_train.update(data_val)
+#     items = list(data_train.items())
+#     print('num train and val:', len(items))
+#     with open(f'data_resplit/exclude_minus_1_train_val_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl', 'wb') as f:
+#         pickle.dump(data_train, f)
+
 
     # crop_img_for_event_cls_3(
     #     ev_data_fp='data/test_event_new_9.pkl',
@@ -486,26 +528,33 @@ if __name__ == '__main__':
     #     if split != 'train':
     #         continue
     #     ev_data_fp = f'data/{split}_event_new_9.pkl'
-<<<<<<< HEAD
     #     out_dir = f'cropped_data_320_128/{split}'
     #     crop_img_for_event_cls_2(ev_data_fp, out_dir, split)
 
     # convert_data_path_from_gpu2_to_156()
 
-=======
     #     out_dir = f'cropped_data_320_400/{split}'
     #     crop_img_for_event_cls_2(ev_data_fp, out_dir, split, crop_size=(320, 400))
->>>>>>> 23d5e1e6716875701e3051a06ff81a7b6ed9c21f
 
-    with open('data/test_event_new_9_exp71_epoch40_centernet_3_frame_add_no_ball_frame.pkl', 'rb') as f:
+    with open('data_resplit/test_event_new_9_exp90_centernet_no_asl_640.pkl', 'rb') as f:
         data = pickle.load(f)
     items = list(data.items())
     print(items[10])
+    # cnt = 0
+    # for img_paths, (ls_ball_pos, labels) in items:
+    #     duplicate = False
+    #     for img_fp in img_paths:
+    #         if 'game_1' in img_fp or 'game_2' in img_fp or 'game_3' in img_fp:
+    #             duplicate = True
+    #             break
+    #     if duplicate:
+    #         cnt += 1
+    # print(f'duplicate: {cnt}')
     pdb.set_trace()
 
     # for split in ['val', 'test', 'train']:
     #     print('processing ', split)
-    #     ev_data_fp = f'data/gpu2_event_{split}_dict_9.pkl'
+    #     ev_data_fp = f'data_resplit/event_{split}_dict_9_yolo_1280.pkl'
     #     gen_data_for_event_cls(ev_data_fp, split)
 
     # bounce, net, empty = 0, 0, 0
@@ -535,10 +584,14 @@ if __name__ == '__main__':
     # n_input_frames = 5
     # path2pos = create_paths2pos(data_dir, n_input_frames, mode='test')
 
+
+
+
+    # # ----------------------------------------- generate data for event classification -----------------------------------------
     # n_input_frames = 9
     # mode = 'test'
     # ev_info, ev_labels = get_events_infor(
-    #     root_dir='/data2/tungtx2/datn/ttnet/dataset/',
+    #     root_dir='/data/tungtx2/datn/dataset/',
     #     # game_list=['game_1', 'game_2', 'game_3', 'game_4', 'game_5'],
     #     game_list=['test_1', 'test_2', 'test_3', 'test_4', 'test_5', 'test_6', 'test_7'],
     #     n_input_frames=n_input_frames,
@@ -555,27 +608,40 @@ if __name__ == '__main__':
     #     keys = list(ev_info.keys())
     #     np.random.shuffle(keys)
 
-    #     train_keys = keys[:int(0.85*len(keys))]
-    #     val_keys = keys[int(0.85*len(keys)):]
+    #     # train_keys = keys[:int(0.85*len(keys))]
+    #     # val_keys = keys[int(0.85*len(keys)):]
+
+    #     train_keys, val_keys = [], []
+    #     for img_paths in keys:
+    #         for img_fp in img_paths:
+    #             if 'game_1' in img_fp or 'game_2' in img_fp or 'game_3' in img_fp:
+    #                 train_keys.append(img_paths)
+    #                 break
+    #             elif 'game_4' in img_fp or 'game_5' in img_fp:
+    #                 val_keys.append(img_paths)
+    #                 break
 
     #     ev_train = {k: ev_info[k] for k in train_keys}
     #     ev_val = {k: ev_info[k] for k in val_keys}
 
     #     train_bin = pickle.dumps(ev_train)
-    #     with open(f'data/gpu2_event_train_dict_{n_input_frames}.pkl', 'wb') as f:
+    #     with open(f'data_resplit/gpu2_event_train_dict_{n_input_frames}.pkl', 'wb') as f:
     #         f.write(train_bin)
 
     #     val_bin = pickle.dumps(ev_val)
-    #     with open(f'data/gpu2_event_val_dict_{n_input_frames}.pkl', 'wb') as f:
+    #     with open(f'data_resplit/gpu2_event_val_dict_{n_input_frames}.pkl', 'wb') as f:
     #         f.write(val_bin)
     # else:
     #     test_bin = pickle.dumps(ev_info)
-    #     with open(f'data/gpu2_event_test_dict_{n_input_frames}.pkl', 'wb') as f:
+    #     with open(f'data_resplit/gpu2_event_test_dict_{n_input_frames}.pkl', 'wb') as f:
     #         f.write(test_bin)
 
 
 
 
-    # with open('data/gpu2_event_val_dict_9.pkl', 'rb') as f:
-    #     obj = pickle.load(f)
-    # pdb.set_trace()
+    # for split in ['train', 'val', 'test']:
+    #     with open(f'data_resplit/gpu2_event_{split}_dict_9.pkl', 'rb') as f:
+    #         obj = pickle.load(f)
+    #     items = list(obj.items())
+    #     print(f'{split}: {len(items)}')
+    #     pdb.set_trace()
