@@ -484,6 +484,7 @@ def crop_img_for_event_cls_3(ev_data_fp, out_dir, split, ball_r, max_invalid_pos
 if __name__ == '__main__':
     np.random.seed(42)
 
+<<<<<<< HEAD
     # for split in ['train', 'val', 'test']:
     #     # with open(f'data_resplit/{split}_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl', 'rb') as f:
     #     with open(f'data_resplit/exclude_minus_1_{split}_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl', 'rb') as f:
@@ -517,6 +518,8 @@ if __name__ == '__main__':
 #         pickle.dump(data_train, f)
 
 
+=======
+>>>>>>> 7fd1f88b4441a7f09042f083ac38c4004f7835c1
     # crop_img_for_event_cls_3(
     #     ev_data_fp='data/test_event_new_9.pkl',
     #     out_dir='cropped_data_320_400/',
@@ -524,10 +527,12 @@ if __name__ == '__main__':
     #     ball_r = 8,
     #     crop_size=(320, 400)
     # )
+    
     # for split in ['test', 'val', 'train']:
     #     if split != 'train':
     #         continue
     #     ev_data_fp = f'data/{split}_event_new_9.pkl'
+<<<<<<< HEAD
     #     out_dir = f'cropped_data_320_128/{split}'
     #     crop_img_for_event_cls_2(ev_data_fp, out_dir, split)
 
@@ -537,6 +542,12 @@ if __name__ == '__main__':
     #     crop_img_for_event_cls_2(ev_data_fp, out_dir, split, crop_size=(320, 400))
 
     with open('data_resplit/test_event_new_9_exp90_centernet_no_asl_640.pkl', 'rb') as f:
+=======
+    #     out_dir = f'cropped_data_320_400/{split}'
+    #     crop_img_for_event_cls_2(ev_data_fp, out_dir, split, crop_size=(320, 400))
+
+    with open('/data2/tungtx2/datn/event_detect/data/yolo_train_event_new_9.pkl', 'rb') as f:
+>>>>>>> 7fd1f88b4441a7f09042f083ac38c4004f7835c1
         data = pickle.load(f)
     items = list(data.items())
     print(items[10])

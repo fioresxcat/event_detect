@@ -14,8 +14,13 @@ trainer:
   logger:
     class_path: pytorch_lightning.loggers.WandbLogger
     init_args:
+<<<<<<< HEAD
       save_dir: 'ckpt_3d/exp20_mask_red_182_182'
       name: 'event_detect_add_table'
+=======
+      save_dir: 'ckpt_3d/exp3_crop_320_400_resize_182_182_yolo_ball'
+      name: ''
+>>>>>>> 7fd1f88b4441a7f09042f083ac38c4004f7835c1
       version: ''
       project: 'event_detect'
 
@@ -105,10 +110,23 @@ model:
       ev_diff_thresh: 0.25
         
 data:
+<<<<<<< HEAD
   # train_path: 'data_resplit/exclude_minus_1_train_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl'
   # val_path: 'data_resplit/exclude_minus_1_val_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl'
   # test_path: 'data_resplit/exclude_minus_1_test_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl'
   # predict_path: 'data_resplit/exclude_minus_1_test_event_new_9_exp80_center_net_add_pos_pred_weight_add_no_ball_frame_3_frames_full.pkl'
+=======
+  # train_path: 'data/train_event_new_9.pkl'
+  # val_path: 'data/val_event_new_9.pkl'
+  # test_path: 'data/test_event_new_9.pkl'
+  # predict_path: 'data/test_event_new_9.pkl'
+
+  train_path: 'data/yolo_train_event_new_9.pkl'
+  val_path: 'data/yolo_val_event_new_9.pkl'
+  test_path: 'data/yolo_test_event_new_9.pkl'
+  predict_path: 'data/yolo_test_event_new_9.pkl'
+
+>>>>>>> 7fd1f88b4441a7f09042f083ac38c4004f7835c1
 
   # train_path: data_resplit/event_train_dict_9_yolo_1280.pkl
   # val_path: data_resplit/event_val_dict_9_yolo_1280.pkl
@@ -139,11 +157,16 @@ data:
     # - 182
     - 182
     - 182
+<<<<<<< HEAD
 
     mask_red_ball: true
     ball_radius: 12  # on original 1920 x 1080 image
     thickness: -1
     tab_xmax_offset: 0
+=======
+    mask_red_ball: false
+    ball_radius: 8
+>>>>>>> 7fd1f88b4441a7f09042f083ac38c4004f7835c1
     do_augment: true
     already_cropped: false
     augment_props:

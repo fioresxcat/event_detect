@@ -6,6 +6,11 @@ cropped_data_320_128/
 data/
 lightning_logs/
 cropped_data_320_128_exp38_fixed_mask_ball/
+<<<<<<< HEAD
 debug/
 results/
 .vscode/
+=======
+masked_red_data/
+test/
+>>>>>>> 7fd1f88b4441a7f09042f083ac38c4004f7835c1

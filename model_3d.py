@@ -14,8 +14,13 @@ from easydict import EasyDict
 from typing import List, Tuple, Dict, Optional, Union
 import pytorch_lightning as pl
 from torchmetrics.classification import MulticlassAccuracy, MulticlassF1Score
+<<<<<<< HEAD
 import os
 from metric import NormalAccuracy, RelaxedAccuracy
+=======
+from model import MyAccuracy
+import torchmetrics
+>>>>>>> 7fd1f88b4441a7f09042f083ac38c4004f7835c1
 
 # class X3DModel(nn.Module):
 #     def __init__(self, version):
@@ -26,6 +31,44 @@ from metric import NormalAccuracy, RelaxedAccuracy
 #         self.head = nn.Sequential(
 #             nn.AdaptiveAvgPool3d((1, 1, 1)),
 #         )
+
+
+
+class MyAccuracy(torchmetrics.Metric):
+    # Set to True if the metric reaches it optimal value when the metric is maximized.
+    # Set to False if it when the metric is minimized.
+    higher_is_better = True
+
+    # Set to True if the metric during 'update' requires access to the global metric
+    # state for its calculations. If not, setting this to False indicates that all
+    # batch states are independent and we will optimize the runtime of 'forward'
+    full_state_update = True
+
+    def __init__(self, ev_diff_thresh):
+        super().__init__()
+        self.ev_diff_thresh = ev_diff_thresh
+        self.add_state("correct", default=torch.tensor(0), dist_reduce_fx="sum")
+        self.add_state("total", default=torch.tensor(0), dist_reduce_fx="sum")
+
+    def update(self, preds: torch.Tensor, target: torch.Tensor):
+        preds = torch.softmax(preds, dim=1)
+        # preds = torch.sigmoid(preds)
+
+        max_preds, max_pred_indices = torch.max(preds, dim=1)
+        valid_pred_indices = max_pred_indices[max_preds>=0.5]
+        max_target, max_target_indices = torch.max(target, dim=1)
+        valid_target_indices = max_target_indices[max_preds>=0.5]
+
+        # n_true = (valid_pred_indices==valid_target_indices).sum()
+        n_true = (max_pred_indices==max_target_indices).sum()
+
+        self.correct += n_true
+        self.total += target.shape[0]
+
+    def compute(self):
+        return self.correct.float() / self.total
+    
+
 class LSTMModel(pl.LightningModule):
     def __init__(self, input_size=2, hidden_size=16, num_layers=2, output_size=16, dropout=0.2):
         super(LSTMModel, self).__init__()
